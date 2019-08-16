@@ -17,8 +17,8 @@
   },
   "message": "The following service(s) have been created in your project: ${NAME}, ${DATABASE_SERVICE_NAME}.\n\n ",
   "labels": {
-      "template": "nodejs-mongodb-example",
-      "app": "nodejs-mongodb-example"
+      "template": "rating-api-mongodb",
+      "app": "rating-api-mongodb"
   },
   "objects": [
     {
