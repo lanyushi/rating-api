@@ -2,7 +2,7 @@
   "kind": "Template",
   "apiVersion": "v1",
   "metadata": {
-    "name": "rating-api-mongodb",
+    "name": "nodejs-mongodb-example",
     "annotations": {
       "openshift.io/display-name": "Node.js + MongoDB (Ephemeral)",
       "description": "An example Node.js application with a MongoDB database.\n\nWARNING: Any data stored will be lost upon pod destruction. Only use this template for testing.",
@@ -17,8 +17,8 @@
   },
   "message": "The following service(s) have been created in your project: ${NAME}, ${DATABASE_SERVICE_NAME}.\n\n ",
   "labels": {
-      "template": "rating-api-mongodb",
-      "app": "rating-api-mongodb"
+      "template": "nodejs-mongodb-example",
+      "app": "nodejs-mongodb-example"
   },
   "objects": [
     {
