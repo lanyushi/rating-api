@@ -1,0 +1,182 @@
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: "rating-pipeline"
+spec:
+  strategy:
+    jenkinsPipelineStrategy:
+      env:
+      jenkinsfile: |-
+        def template1Path = 'https://raw.githubusercontent.com/lanyushi/rating-api/master/rating-api-mongodb.json' 
+        def template1Name = 'rating-api-mongodb' 
+        def template2Path = 'https://raw.githubusercontent.com/lanyushi/rating-web/master/rating-web.json' 
+        def template2Name = 'rating-web' 
+        pipeline {
+          agent {
+            node    {
+              label 'nodejs' 
+                    }
+                }
+          options {
+            timeout(time: 20, unit: 'MINUTES') 
+          }
+          stages {
+            stage('api-preamble') {
+                steps {
+                    script {
+                        openshift.withCluster() {
+                            openshift.withProject() {
+                                echo "Using project: ${openshift.project()}"
+                            }
+                        }
+                    }
+                }
+            }
+            stage('api-cleanup') {
+              steps {
+                script {
+                    openshift.withCluster() {
+                        openshift.withProject() {
+                          openshift.selector("all", [ template : template1Name ]).delete() 
+                          if (openshift.selector("secrets", template1Name).exists()) { 
+                            openshift.selector("secrets", template1Name).delete()
+                          }
+                        }
+                    }
+                }
+              }
+            }
+            stage('api-create') {
+              steps {
+                script {
+                    openshift.withCluster() {
+                        openshift.withProject() {
+                          openshift.newApp(template1Path) 
+                        }
+                    }
+                }
+              }
+            }
+            stage('api-build') {
+              steps {
+                script {
+                    openshift.withCluster() {
+                        openshift.withProject() {
+                          def builds = openshift.selector("bc", template1Name).related('builds')
+                          timeout(5) { 
+                            builds.untilEach(1) {
+                              return (it.object().status.phase == "Complete")
+                            }
+                          }
+                        }
+                    }
+                }
+              }
+            }
+            stage('api-deploy') {
+              steps {
+                script {
+                    openshift.withCluster() {
+                        openshift.withProject() {
+                          timeout(5) { 
+                            openshift.selector("dc", template1Name).related('pods').untilEach(1) {
+                              return (it.object().status.phase == "Running")
+                            }
+                          }
+                        }
+                    }
+                }
+              }
+            }
+            stage('api-tag') {
+              steps {
+                script {
+                    openshift.withCluster() {
+                        openshift.withProject() {
+                          openshift.tag("${template1Name}:latest", "${template1Name}-staging:latest") 
+                        }
+                    }
+                }
+              }
+            }
+            stage('web-preamble') {
+                steps {
+                    script {
+                        openshift.withCluster() {
+                            openshift.withProject() {
+                                echo "Using project: ${openshift.project()}"
+                            }
+                        }
+                    }
+                }
+            }
+            stage('web-cleanup') {
+              steps {
+                script {
+                    openshift.withCluster() {
+                        openshift.withProject() {
+                          openshift.selector("all", [ template : template2Name ]).delete() 
+                          if (openshift.selector("secrets", template2Name).exists()) { 
+                            openshift.selector("secrets", template2Name).delete()
+                          }
+                        }
+                    }
+                }
+              }
+            }
+            stage('web-create') {
+              steps {
+                script {
+                    openshift.withCluster() {
+                        openshift.withProject() {
+                          openshift.newApp(template2Path) 
+                        }
+                    }
+                }
+              }
+            }
+            stage('web-build') {
+              steps {
+                script {
+                    openshift.withCluster() {
+                        openshift.withProject() {
+                          def builds = openshift.selector("bc", template2Name).related('builds')
+                          timeout(5) { 
+                            builds.untilEach(1) {
+                              return (it.object().status.phase == "Complete")
+                            }
+                          }
+                        }
+                    }
+                }
+              }
+            }
+            stage('web-deploy') {
+              steps {
+                script {
+                    openshift.withCluster() {
+                        openshift.withProject() {
+                          timeout(5) { 
+                            openshift.selector("dc", template2Name).related('pods').untilEach(1) {
+                              return (it.object().status.phase == "Running")
+                            }
+                          }
+                        }
+                    }
+                }
+              }
+            }
+            stage('web-tag') {
+              steps {
+                script {
+                    openshift.withCluster() {
+                        openshift.withProject() {
+                          openshift.tag("${template2Name}:latest", "${template2Name}-staging:latest") 
+                        }
+                    }
+                }
+              }
+            }
+          }
+        }
+    type: JenkinsPipeline
